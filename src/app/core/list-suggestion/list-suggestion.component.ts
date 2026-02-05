@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Input } from '@angular/core';
 import { Suggestion } from '../../models/suggestion';
 
 @Component({
@@ -7,11 +7,12 @@ import { Suggestion } from '../../models/suggestion';
   styleUrls: ['./list-suggestion.component.css']
 })
 export class ListSuggestionComponent implements OnInit {
+  @Input() currentView: string = 'dashboard';
+  
   searchText: string = '';
   favorites: Suggestion[] = [];
   currentFilter: string = 'all';
-  sortBy: string = 'date';
-  viewMode: string = 'grid'; // 'grid' ou 'list'
+  showFavoritesView: boolean = false;
   
   suggestions: Suggestion[] = [
     {
@@ -71,19 +72,77 @@ export class ListSuggestionComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    // Initialisation
+    this.loadLikesFromStorage();
+    this.loadFavoritesFromStorage();
   }
 
-  // Filtrer les suggestions selon la recherche et le filtre actif
-  get filteredSuggestions(): Suggestion[] {
-    let result = [...this.suggestions];
+  handleEmptyAction(): void {
+    if (this.showFavoritesView) {
+      this.showAllSuggestions();
+    } else {
+      this.searchText = '';
+      this.setFilter('all');
+    }
+  }
 
-    // Appliquer le filtre de statut
-    if (this.currentFilter !== 'all') {
+  loadLikesFromStorage(): void {
+    const savedLikes = localStorage.getItem('suggestion_likes');
+    if (savedLikes) {
+      try {
+        const likesData = JSON.parse(savedLikes);
+        this.suggestions.forEach(suggestion => {
+          if (likesData[suggestion.id] !== undefined) {
+            suggestion.nbLikes = likesData[suggestion.id];
+          }
+        });
+      } catch (error) {
+        console.error('Erreur chargement likes:', error);
+      }
+    }
+  }
+
+  saveLikesToStorage(): void {
+    const likesData: { [key: number]: number } = {};
+    this.suggestions.forEach(suggestion => {
+      likesData[suggestion.id] = suggestion.nbLikes;
+    });
+    localStorage.setItem('suggestion_likes', JSON.stringify(likesData));
+  }
+
+  loadFavoritesFromStorage(): void {
+    const savedFavorites = localStorage.getItem('suggestion_favorites');
+    if (savedFavorites) {
+      try {
+        const favoriteIds: number[] = JSON.parse(savedFavorites);
+        this.favorites = this.suggestions.filter(s => favoriteIds.includes(s.id));
+      } catch (error) {
+        console.error('Erreur chargement favoris:', error);
+      }
+    }
+  }
+
+  saveFavoritesToStorage(): void {
+    const favoriteIds = this.favorites.map(f => f.id);
+    localStorage.setItem('suggestion_favorites', JSON.stringify(favoriteIds));
+  }
+
+  showFavorites(): void {
+    this.showFavoritesView = true;
+    this.currentFilter = 'all';
+  }
+
+  showAllSuggestions(): void {
+    this.showFavoritesView = false;
+    this.currentFilter = 'all';
+  }
+
+  get filteredSuggestions(): Suggestion[] {
+    let result = this.showFavoritesView ? [...this.favorites] : [...this.suggestions];
+
+    if (this.currentFilter !== 'all' && !this.showFavoritesView) {
       result = result.filter(s => s.status === this.currentFilter);
     }
 
-    // Appliquer la recherche par texte
     if (this.searchText) {
       const searchLower = this.searchText.toLowerCase();
       result = result.filter(s => 
@@ -93,50 +152,30 @@ export class ListSuggestionComponent implements OnInit {
       );
     }
 
-    // Appliquer le tri
-    result = this.sortSuggestions(result);
-
-    return result;
+    return result.sort((a, b) => b.date.getTime() - a.date.getTime());
   }
 
-  // Trier les suggestions
-  sortSuggestions(suggestions: Suggestion[]): Suggestion[] {
-    switch (this.sortBy) {
-      case 'date':
-        return suggestions.sort((a, b) => b.date.getTime() - a.date.getTime());
-      case 'likes':
-        return suggestions.sort((a, b) => b.nbLikes - a.nbLikes);
-      case 'title':
-        return suggestions.sort((a, b) => a.title.localeCompare(b.title));
-      default:
-        return suggestions;
-    }
-  }
-
-  // Incrémenter les likes avec animation
   incrementLikes(suggestion: Suggestion): void {
     suggestion.nbLikes++;
-    // Animation visuelle gérer dans le CSS avec une classe temporaire
+    this.saveLikesToStorage();
   }
 
-  // Ajouter aux favoris
   addToFavorites(suggestion: Suggestion): void {
     if (!this.favorites.find(f => f.id === suggestion.id)) {
       this.favorites.push(suggestion);
+      this.saveFavoritesToStorage();
     }
   }
 
-  // Retirer des favoris
   removeFromFavorites(suggestion: Suggestion): void {
     this.favorites = this.favorites.filter(f => f.id !== suggestion.id);
+    this.saveFavoritesToStorage();
   }
 
-  // Vérifier si une suggestion est dans les favoris
   isInFavorites(id: number): boolean {
     return this.favorites.some(f => f.id === id);
   }
 
-  // Basculer favori
   toggleFavorite(suggestion: Suggestion): void {
     if (this.isInFavorites(suggestion.id)) {
       this.removeFromFavorites(suggestion);
@@ -145,68 +184,32 @@ export class ListSuggestionComponent implements OnInit {
     }
   }
 
-  // Définir le filtre actif
   setFilter(filter: string): void {
     this.currentFilter = filter;
+    this.showFavoritesView = false;
   }
 
-  // Définir le tri
-  setSortBy(sortBy: string): void {
-    this.sortBy = sortBy;
-  }
-
-  // Changer le mode d'affichage
-  setViewMode(mode: string): void {
-    this.viewMode = mode;
-  }
-
-  // Compter les suggestions acceptées
   getAcceptedCount(): number {
     return this.suggestions.filter(s => s.status === 'acceptee').length;
   }
 
-  // Compter les suggestions en attente
   getPendingCount(): number {
     return this.suggestions.filter(s => s.status === 'en_attente').length;
   }
 
-  // Compter les suggestions refusées
   getRejectedCount(): number {
     return this.suggestions.filter(s => s.status === 'refusee').length;
   }
 
-  // Obtenir le total des likes
-  getTotalLikes(): number {
-    return this.suggestions.reduce((sum, s) => sum + s.nbLikes, 0);
+    getFavoritesCount(): number {
+    return this.favorites.length;
   }
 
-  // Obtenir la couleur du statut
-  getStatusColor(status: string): string {
-    switch (status) {
-      case 'acceptee': return '#10b981';
-      case 'en_attente': return '#f59e0b';
-      case 'refusee': return '#ef4444';
-      default: return '#64748b';
-    }
+  // NOUVELLE MÉTHODE À AJOUTER
+  showFavoritesOnly(): void {
+    this.showFavoritesView = true;
+    this.currentFilter = 'all';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Obtenir le label du statut
-  getStatusLabel(status: string): string {
-    switch (status) {
-      case 'acceptee': return 'Acceptée';
-      case 'en_attente': return 'En attente';
-      case 'refusee': return 'Refusée';
-      default: return status;
-    }
-  }
-
-  // Obtenir l'icône de la catégorie
-  getCategoryIcon(category: string): string {
-    switch (category.toLowerCase()) {
-      case 'technologie': return '💻';
-      case 'événements': return '🎉';
-      case 'ressources humaines': return '👥';
-      default: return '📌';
-    }
-  }
 }

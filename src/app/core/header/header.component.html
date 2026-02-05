@@ -1,5 +1,4 @@
 <header class="premium-header">
-  <!-- Background animé avec particules -->
   <div class="header-bg">
     <div class="particles"></div>
     <div class="gradient-overlay"></div>
@@ -8,8 +7,7 @@
   <div class="header-container">
     <div class="header-content">
       
-      <!-- Logo Section Premium -->
-      <div class="logo-section" data-aos="fade-right">
+      <div class="logo-section">
         <div class="logo-wrapper">
           <div class="logo-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -26,9 +24,8 @@
         </div>
       </div>
 
-      <!-- Navigation Premium -->
-      <nav class="main-nav" data-aos="fade-left">
-        <a href="#dashboard" class="nav-item active">
+      <nav class="main-nav">
+        <a (click)="changeView('dashboard')" class="nav-item" [class.active]="currentView === 'dashboard'">
           <span class="nav-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="7" height="7"></rect>
@@ -40,7 +37,7 @@
           <span class="nav-label">Dashboard</span>
         </a>
         
-        <a href="#suggestions" class="nav-item">
+        <a (click)="changeView('suggestions')" class="nav-item" [class.active]="currentView === 'suggestions'">
           <span class="nav-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 20h9"></path>
@@ -50,7 +47,7 @@
           <span class="nav-label">Suggestions</span>
         </a>
 
-        <a href="#analytics" class="nav-item">
+        <a (click)="changeView('analytics')" class="nav-item" [class.active]="currentView === 'analytics'">
           <span class="nav-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="20" x2="12" y2="10"></line>
@@ -60,24 +57,9 @@
           </span>
           <span class="nav-label">Analytics</span>
         </a>
-
-        <a href="#team" class="nav-item">
-          <span class="nav-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
-          </span>
-          <span class="nav-label">Team</span>
-        </a>
       </nav>
 
-      <!-- User Actions Premium -->
-      <div class="user-actions" data-aos="fade-left" data-aos-delay="100">
-        
-        <!-- Notifications -->
+      <div class="user-actions">
         <button class="action-btn notification-btn">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -86,7 +68,6 @@
           <span class="notification-badge">3</span>
         </button>
 
-        <!-- Settings -->
         <button class="action-btn">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
@@ -94,7 +75,6 @@
           </svg>
         </button>
 
-        <!-- User Profile -->
         <div class="user-profile">
           <div class="user-avatar">
             <img src="https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff&bold=true" alt="User Avatar">
@@ -113,11 +93,5 @@
     </div>
   </div>
 
-  <!-- Progress Bar -->
   <div class="header-progress"></div>
 </header>
-
-<!-- Ajouter AOS pour les animations (à ajouter dans index.html) -->
-<!-- <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" /> -->
-<!-- <script src="https://unpkg.com/aos@next/dist/aos.js"></script> -->
-<!-- <script>AOS.init();</script> -->
