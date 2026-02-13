@@ -37,13 +37,12 @@
         </div>
       </div>
 
-      <!-- Section Liens rapides AVEC NAVIGATION -->
+      <!-- Section Liens rapides - SANS Aide et Contact -->
       <div class="footer-section">
         <h4 class="section-title">Liens Rapides</h4>
         <ul class="footer-links">
-          <li><a (click)="changeView('dashboard')" style="cursor: pointer;">🏠 Accueil</a></li>
-          <li><a (click)="changeView('suggestions')" style="cursor: pointer;">💡 Suggestions</a></li>
-          <li><a (click)="changeView('analytics')" style="cursor: pointer;">📊 Statistiques</a></li>
+          <li><a routerLink="/home">🏠 Accueil</a></li>
+          <li><a routerLink="/suggestions">💡 Suggestions</a></li>
         </ul>
       </div>
 

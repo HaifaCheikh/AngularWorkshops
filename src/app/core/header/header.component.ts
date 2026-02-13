@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-header',
@@ -6,11 +6,4 @@ import { Component, EventEmitter, Output } from '@angular/core';
   styleUrls: ['./header.component.css']
 })
 export class HeaderComponent {
-  @Output() viewChange = new EventEmitter<string>();
-  currentView: string = 'dashboard';
-
-  changeView(view: string): void {
-    this.currentView = view;
-    this.viewChange.emit(view);
-  }
 }
