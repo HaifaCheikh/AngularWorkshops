@@ -211,11 +211,16 @@
   transform: scaleX(1);
 }
 
+/* ===== ✨ NOUVEAU : BARRE D'ACTIONS EN HAUT ===== */
+.card-top-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
 /* ===== BADGE DE STATUT ===== */
 .status-badge {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
   padding: 0.4rem 0.9rem;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -241,10 +246,57 @@
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+/* ===== ✨ NOUVEAU : ICÔNES D'ACTION ===== */
+.action-icons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #f8fafc;
+}
+
+.icon-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.icon-btn:active {
+  transform: translateY(0);
+}
+
+/* Icône Modifier (stylo) */
+.edit-icon {
+  color: #3b82f6;
+}
+
+.edit-icon:hover {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+/* Icône Supprimer (poubelle) */
+.delete-icon {
+  color: #ef4444;
+}
+
+.delete-icon:hover {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
 /* ===== EN-TÊTE DE CARTE ===== */
 .card-header {
   margin-bottom: 1rem;
-  padding-right: 120px;
 }
 
 .card-title {
@@ -308,23 +360,23 @@
   font-size: 1rem;
 }
 
-/* ===== ACTIONS ===== */
+/* ===== ACTIONS (seulement 3 boutons maintenant) ===== */
 .card-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
 }
 
 .action-btn {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.85rem 1.25rem;
+  padding: 0.85rem 1rem;
   border: none;
   border-radius: 12px;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -363,6 +415,20 @@
   transform: scale(0.95);
 }
 
+.btn-details {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+}
+
+.btn-details:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+.btn-details:active {
+  transform: scale(0.95);
+}
+
 /* ===== MESSAGE AUCUN RÉSULTAT ===== */
 .no-results {
   text-align: center;
@@ -386,6 +452,23 @@
 .no-results p {
   color: #64748b;
   font-size: 1rem;
+  margin-bottom: 2rem;
+}
+
+.empty-btn {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.empty-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
 }
 
 /* ===== ANIMATIONS ===== */
@@ -427,16 +510,12 @@
     gap: 1.25rem;
   }
 
-  .card-header {
-    padding-right: 100px;
-  }
-
   .card-title {
     font-size: 1.2rem;
   }
 
   .card-actions {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   .action-btn {
@@ -457,5 +536,10 @@
 
   .filter-btn {
     white-space: nowrap;
+  }
+
+  .card-top-actions {
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 }

@@ -8,7 +8,8 @@ import { HeaderComponent } from './core/header/header.component';
 import { FooterComponent } from './core/footer/footer.component';
 import { HomeComponent } from './core/home/home.component';
 import { NotfoundComponent } from './core/notfound/notfound.component';
-import { AddSuggestionComponent } from './core/add-suggestion/add-suggestion.component';
+// ❌ SUPPRIMER cette ligne qui causait l'erreur :
+// import { AddSuggestionComponent } from './core/add-suggestion/add-suggestion.component';
 
 @NgModule({
   declarations: [
@@ -16,10 +17,7 @@ import { AddSuggestionComponent } from './core/add-suggestion/add-suggestion.com
     HeaderComponent,
     FooterComponent,
     HomeComponent,
-    NotfoundComponent,
-    AddSuggestionComponent
-    // ListSuggestionComponent est maintenant dans SuggestionsModule (Lazy Loading)
-  ],
+    NotfoundComponent  ],
   imports: [
     BrowserModule,
     FormsModule,

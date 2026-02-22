@@ -13,10 +13,8 @@ export class ListSuggestionComponent implements OnInit {
   currentFilter: string = 'all';
   showFavoritesView: boolean = false;
   
-  // Pour vérifier si on est dans le navigateur
   private isBrowser: boolean;
   
-  // Suggestions par défaut (exemples)
   defaultSuggestions: Suggestion[] = [
     {
       id: 1,
@@ -74,7 +72,6 @@ export class ListSuggestionComponent implements OnInit {
     }
   ];
 
-  // Liste complète des suggestions (par défaut + nouvelles)
   suggestions: Suggestion[] = [];
 
   constructor(@Inject(PLATFORM_ID) platformId: Object) {
@@ -82,31 +79,42 @@ export class ListSuggestionComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // ORDRE IMPORTANT : charger d'abord les suggestions, puis les likes
+    console.log('🔄 Initialisation du composant...');
     this.loadAllSuggestions();
     this.loadLikesFromStorage();
     this.loadFavoritesFromStorage();
+    console.log('✅ Suggestions chargées:', this.suggestions.length);
+    console.log('📋 Liste des suggestions:', this.suggestions.map(s => `${s.id}: ${s.title}`));
   }
 
-  // Charger toutes les suggestions (par défaut + localStorage)
   loadAllSuggestions(): void {
-    // Commencer avec les suggestions par défaut
+    console.log('\n📦 Chargement des suggestions...');
+    
+    // Toujours commencer avec les suggestions par défaut
     this.suggestions = [...this.defaultSuggestions];
+    console.log('✅ Suggestions par défaut:', this.suggestions.length);
 
-    // Charger les suggestions ajoutées par l'utilisateur
     if (this.isBrowser) {
       const savedSuggestions = localStorage.getItem('all_suggestions');
+      console.log('💾 localStorage brut:', savedSuggestions);
+      
       if (savedSuggestions) {
         try {
           const userSuggestions = JSON.parse(savedSuggestions);
-          // Ajouter les suggestions utilisateur APRÈS les suggestions par défaut
+          console.log('📥 Suggestions utilisateur parsées:', userSuggestions.length);
+          
+          // Ajouter les suggestions utilisateur
           this.suggestions = [...this.suggestions, ...userSuggestions];
-          console.log('✅ Total suggestions:', this.suggestions.length);
+          console.log('✅ Total après fusion:', this.suggestions.length);
         } catch (error) {
           console.error('❌ Erreur chargement suggestions:', error);
         }
+      } else {
+        console.log('ℹ️ Aucune suggestion dans localStorage');
       }
     }
+    
+    console.log('📊 Suggestions finales:', this.suggestions.map(s => `ID ${s.id}: ${s.title} (${s.status})`));
   }
 
   handleEmptyAction(): void {
@@ -130,6 +138,7 @@ export class ListSuggestionComponent implements OnInit {
             suggestion.nbLikes = likesData[suggestion.id];
           }
         });
+        console.log('👍 Likes chargés');
       } catch (error) {
         console.error('Erreur chargement likes:', error);
       }
@@ -154,7 +163,7 @@ export class ListSuggestionComponent implements OnInit {
       try {
         const favoriteIds: number[] = JSON.parse(savedFavorites);
         this.favorites = this.suggestions.filter(s => favoriteIds.includes(s.id));
-        console.log('✅ Favoris chargés:', this.favorites.length);
+        console.log('⭐ Favoris chargés:', this.favorites.length);
       } catch (error) {
         console.error('Erreur chargement favoris:', error);
       }
@@ -171,40 +180,45 @@ export class ListSuggestionComponent implements OnInit {
   showFavorites(): void {
     this.showFavoritesView = true;
     this.currentFilter = 'all';
+    console.log('⭐ Affichage des favoris');
   }
 
   showAllSuggestions(): void {
     this.showFavoritesView = false;
     this.currentFilter = 'all';
+    console.log('📋 Affichage de toutes les suggestions');
   }
 
-  // FILTRAGE CORRIGÉ
   get filteredSuggestions(): Suggestion[] {
-    // Étape 1 : Choisir la source (favoris ou toutes les suggestions)
+    console.log('\n🔍 Filtrage des suggestions...');
+    console.log('📊 Suggestions disponibles:', this.suggestions.length);
+    console.log('🎯 Filtre actuel:', this.currentFilter);
+    console.log('⭐ Vue favoris:', this.showFavoritesView);
+    console.log('🔎 Texte recherche:', this.searchText);
+    
     let result = this.showFavoritesView ? [...this.favorites] : [...this.suggestions];
+    console.log('📦 Après sélection favoris/tous:', result.length);
 
-    console.log('🔍 Filtrage - Source:', this.showFavoritesView ? 'Favoris' : 'Toutes');
-    console.log('🔍 Nombre de suggestions de départ:', result.length);
-    console.log('🔍 Filtre actif:', this.currentFilter);
-
-    // Étape 2 : Appliquer le filtre de statut (UNIQUEMENT si pas en vue favoris)
+    // Filtre par statut
     if (this.currentFilter !== 'all' && !this.showFavoritesView) {
+      console.log('🔍 Application du filtre statut:', this.currentFilter);
       result = result.filter(s => s.status === this.currentFilter);
-      console.log('🔍 Après filtre statut:', result.length, 'suggestions');
+      console.log('📊 Après filtre statut:', result.length);
     }
 
-    // Étape 3 : Appliquer la recherche par texte
-    if (this.searchText && this.searchText.trim() !== '') {
+    // Recherche texte
+    if (this.searchText && this.searchText.trim()) {
       const searchLower = this.searchText.toLowerCase().trim();
+      console.log('🔍 Application de la recherche:', searchLower);
       result = result.filter(s => 
         s.title.toLowerCase().includes(searchLower) ||
         s.category.toLowerCase().includes(searchLower) ||
         s.description.toLowerCase().includes(searchLower)
       );
-      console.log('🔍 Après recherche:', result.length, 'suggestions');
+      console.log('📊 Après recherche:', result.length);
     }
 
-    // Étape 4 : Trier par date (plus récent d'abord)
+    // Tri par date (plus récent en premier)
     result = result.sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
@@ -212,12 +226,14 @@ export class ListSuggestionComponent implements OnInit {
     });
 
     console.log('✅ Résultat final:', result.length, 'suggestions');
+    console.log('📋 IDs filtrés:', result.map(s => s.id));
     return result;
   }
 
   incrementLikes(suggestion: Suggestion): void {
     suggestion.nbLikes++;
     this.saveLikesToStorage();
+    console.log('👍 Like ajouté:', suggestion.title);
   }
 
   addToFavorites(suggestion: Suggestion): void {
@@ -231,7 +247,7 @@ export class ListSuggestionComponent implements OnInit {
   removeFromFavorites(suggestion: Suggestion): void {
     this.favorites = this.favorites.filter(f => f.id !== suggestion.id);
     this.saveFavoritesToStorage();
-    console.log('❌ Retiré des favoris:', suggestion.title);
+    console.log('⭐ Retiré des favoris:', suggestion.title);
   }
 
   isInFavorites(id: number): boolean {
@@ -250,6 +266,32 @@ export class ListSuggestionComponent implements OnInit {
     console.log('🎯 Changement de filtre:', filter);
     this.currentFilter = filter;
     this.showFavoritesView = false;
+  }
+
+  deleteSuggestion(suggestion: Suggestion): void {
+    const confirmDelete = confirm(`Êtes-vous sûr de vouloir supprimer la suggestion "${suggestion.title}" ?`);
+    
+    if (confirmDelete) {
+      console.log('🗑️ Suppression de:', suggestion.title);
+      
+      // Supprimer la suggestion de la liste
+      this.suggestions = this.suggestions.filter(s => s.id !== suggestion.id);
+      
+      // Supprimer des favoris si présente
+      this.favorites = this.favorites.filter(f => f.id !== suggestion.id);
+      
+      // Sauvegarder dans localStorage (seulement les suggestions utilisateur)
+      if (this.isBrowser) {
+        const userSuggestions = this.suggestions.filter(s => s.id > 6);
+        console.log('💾 Sauvegarde des suggestions utilisateur:', userSuggestions.length);
+        localStorage.setItem('all_suggestions', JSON.stringify(userSuggestions));
+        this.saveFavoritesToStorage();
+        this.saveLikesToStorage();
+      }
+      
+      console.log('✅ Suggestion supprimée avec succès');
+      alert('✅ Suggestion supprimée avec succès !');
+    }
   }
 
   getAcceptedCount(): number {

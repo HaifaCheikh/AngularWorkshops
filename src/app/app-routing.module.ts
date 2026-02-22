@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { HomeComponent } from './core/home/home.component';
-import { AddSuggestionComponent } from './core/add-suggestion/add-suggestion.component';
 import { NotfoundComponent } from './core/notfound/notfound.component';
 
 const routes: Routes = [
@@ -10,9 +9,9 @@ const routes: Routes = [
   
   // Routes normales
   { path: 'home', component: HomeComponent },
-  { path: 'add-suggestion', component: AddSuggestionComponent },
   
-  // REDIRECTION : /listSuggestion → /suggestions (pour compatibilité)
+  // Redirection pour compatibilité
+  { path: 'add-suggestion', redirectTo: '/suggestions/add', pathMatch: 'full' },
   { path: 'listSuggestion', redirectTo: '/suggestions', pathMatch: 'full' },
   
   // LAZY LOADING - Module Suggestions

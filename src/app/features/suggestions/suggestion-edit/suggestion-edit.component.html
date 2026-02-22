@@ -1,0 +1,156 @@
+<div class="form-container">
+  <div class="form-wrapper">
+    
+    <!-- En-tête -->
+    <div class="form-header">
+      <button class="btn-back" (click)="onCancel()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        Retour
+      </button>
+      <h1 class="form-title">
+        <span class="icon">✏️</span>
+        Modifier la suggestion
+      </h1>
+      <p class="form-subtitle">Modifiez les informations de votre suggestion</p>
+    </div>
+
+    <!-- Formulaire -->
+    <form [formGroup]="suggestionForm" (ngSubmit)="onSubmit()" class="suggestion-form">
+      
+      <!-- Titre -->
+      <div class="form-group">
+        <label for="title" class="form-label">
+          Titre <span class="required">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="title" 
+          formControlName="title"
+          class="form-input"
+          [class.invalid]="title?.invalid && title?.touched"
+          placeholder="Commencez par une majuscule (min. 5 caractères)">
+        
+        <!-- Messages d'erreur -->
+        <div class="error-messages" *ngIf="title?.invalid && title?.touched">
+          <div class="error-message" *ngIf="title?.errors?.['required']">
+            ⚠️ Le titre est obligatoire
+          </div>
+          <div class="error-message" *ngIf="title?.errors?.['minlength']">
+            ⚠️ Le titre doit contenir au minimum 5 caractères
+          </div>
+          <div class="error-message" *ngIf="title?.errors?.['pattern']">
+            ⚠️ Le titre doit commencer par une majuscule et ne contenir que des lettres
+          </div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="form-group">
+        <label for="description" class="form-label">
+          Description <span class="required">*</span>
+        </label>
+        <textarea 
+          id="description" 
+          formControlName="description"
+          rows="6"
+          class="form-textarea"
+          [class.invalid]="description?.invalid && description?.touched"
+          placeholder="Décrivez votre suggestion en détail (min. 30 caractères)"></textarea>
+        
+        <!-- Compteur de caractères -->
+        <div class="char-counter">
+          {{ description?.value?.length || 0 }} / 30 caractères minimum
+        </div>
+        
+        <!-- Messages d'erreur -->
+        <div class="error-messages" *ngIf="description?.invalid && description?.touched">
+          <div class="error-message" *ngIf="description?.errors?.['required']">
+            ⚠️ La description est obligatoire
+          </div>
+          <div class="error-message" *ngIf="description?.errors?.['minlength']">
+            ⚠️ La description doit contenir au minimum 30 caractères
+          </div>
+        </div>
+      </div>
+
+      <!-- Catégorie -->
+      <div class="form-group">
+        <label for="category" class="form-label">
+          Catégorie <span class="required">*</span>
+        </label>
+        <select 
+          id="category" 
+          formControlName="category"
+          class="form-select"
+          [class.invalid]="category?.invalid && category?.touched">
+          <option value="" disabled>-- Sélectionnez une catégorie --</option>
+          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+        </select>
+        
+        <!-- Messages d'erreur -->
+        <div class="error-messages" *ngIf="category?.invalid && category?.touched">
+          <div class="error-message" *ngIf="category?.errors?.['required']">
+            ⚠️ La catégorie est obligatoire
+          </div>
+        </div>
+      </div>
+
+      <!-- Date (readonly) -->
+      <div class="form-group">
+        <label for="date" class="form-label">
+          Date
+        </label>
+        <input 
+          type="date" 
+          id="date" 
+          formControlName="date"
+          class="form-input"
+          readonly>
+      </div>
+
+      <!-- Status (readonly) -->
+      <div class="form-group">
+        <label for="status" class="form-label">
+          Statut
+        </label>
+        <input 
+          type="text" 
+          id="status" 
+          formControlName="status"
+          class="form-input"
+          readonly>
+      </div>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-cancel" (click)="onCancel()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          Annuler
+        </button>
+        
+        <button 
+          type="submit" 
+          class="btn btn-submit" 
+          [disabled]="suggestionForm.invalid">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Enregistrer
+        </button>
+      </div>
+
+      <!-- Indicateur de validité -->
+      <div class="form-status" *ngIf="suggestionForm.invalid">
+        ℹ️ Le formulaire contient des erreurs. Veuillez corriger les champs en rouge.
+      </div>
+
+    </form>
+
+  </div>
+</div>
