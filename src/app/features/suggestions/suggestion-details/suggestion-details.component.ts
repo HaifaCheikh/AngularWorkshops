@@ -2,6 +2,7 @@ import { Component, OnInit, PLATFORM_ID, Inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { Suggestion } from '../../../models/suggestion';
+import { SuggestionService } from '../../../core/services/suggestion.service';
 
 @Component({
   selector: 'app-suggestion-details',
@@ -13,133 +14,162 @@ export class SuggestionDetailsComponent implements OnInit {
   suggestion: Suggestion | undefined;
   private isBrowser: boolean;
 
-  // Suggestions par défaut (même liste que dans list-suggestion)
-  defaultSuggestions: Suggestion[] = [
-    {
-      id: 1,
-      title: 'Organiser une journée team building',
-      description: 'Suggestion pour organiser une journée de team building pour renforcer les liens entre les membres de l\'équipe et améliorer la cohésion d\'équipe.',
-      category: 'Événements',
-      date: new Date('2025-01-20'),
-      status: 'acceptee',
-      nbLikes: 10
-    },
-    {
-      id: 2,
-      title: 'Améliorer le système de réservation',
-      description: 'Proposition pour améliorer la gestion des réservations en ligne avec un système de confirmation automatique et notifications en temps réel.',
-      category: 'Technologie',
-      date: new Date('2025-01-15'),
-      status: 'refusee',
-      nbLikes: 5
-    },
-    {
-      id: 3,
-      title: 'Créer un système de récompenses',
-      description: 'Mise en place d\'un programme de récompenses pour motiver les employés et reconnaître leurs efforts avec des badges et points.',
-      category: 'Ressources Humaines',
-      date: new Date('2025-01-25'),
-      status: 'refusee',
-      nbLikes: 3
-    },
-    {
-      id: 4,
-      title: 'Moderniser l\'interface utilisateur',
-      description: 'Refonte complète de l\'interface utilisateur pour une meilleure expérience utilisateur avec un design moderne et intuitif.',
-      category: 'Technologie',
-      date: new Date('2025-01-30'),
-      status: 'en_attente',
-      nbLikes: 15
-    },
-    {
-      id: 5,
-      title: 'Implémenter le télétravail hybride',
-      description: 'Mise en place d\'une politique de télétravail hybride pour améliorer l\'équilibre vie professionnelle/vie personnelle.',
-      category: 'Ressources Humaines',
-      date: new Date('2025-02-01'),
-      status: 'acceptee',
-      nbLikes: 22
-    },
-    {
-      id: 6,
-      title: 'Optimiser les processus de recrutement',
-      description: 'Automatisation et optimisation du processus de recrutement avec des outils d\'IA pour gagner du temps.',
-      category: 'Ressources Humaines',
-      date: new Date('2025-01-28'),
-      status: 'en_attente',
-      nbLikes: 8
-    }
-  ];
-
-  allSuggestions: Suggestion[] = [];
-
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    @Inject(PLATFORM_ID) platformId: Object
+    @Inject(PLATFORM_ID) platformId: Object,
+    private suggestionService: SuggestionService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
   ngOnInit(): void {
-    // Récupérer l'ID depuis l'URL
     this.route.params.subscribe(params => {
-      this.suggestionId = +params['id']; // Le + convertit string en number
+      this.suggestionId = +params['id'];
       console.log('📌 ID récupéré:', this.suggestionId);
       this.loadSuggestion();
     });
   }
 
   loadSuggestion(): void {
-    // Charger toutes les suggestions (par défaut + localStorage)
-    this.allSuggestions = [...this.defaultSuggestions];
+    this.suggestionService.getSuggestionById(this.suggestionId).subscribe({
+      next: (data: Suggestion) => {
+        // ✅ CORRECTION : Ajouter des valeurs par défaut si undefined
+        this.suggestion = {
+          ...data,
+          nbLikes: data.nbLikes ?? 0,  // Si undefined ou null → 0
+          status: data.status || 'en_attente',  // Si vide → 'en_attente'
+          category: data.category || 'Autre'  // Si vide → 'Autre'
+        };
+        
+        console.log('✅ Suggestion chargée via API');
+        console.log('⚠️ Likes:', this.suggestion.nbLikes);
+        console.log('⚠️ Status:', this.suggestion.status);
+        
+        // Charger les likes depuis localStorage (synchronisation)
+        this.loadLikesForSuggestion();
+      },
+      error: (err) => {
+        console.warn('⚠️ API non disponible, fallback localStorage');
+        this.loadSuggestionFromLocalStorage();
+      }
+    });
+  }
 
+  loadSuggestionFromLocalStorage(): void {
+    const allSuggestions = this.suggestionService.getSuggestionsList();
+    
     if (this.isBrowser) {
-      const savedSuggestions = localStorage.getItem('all_suggestions');
-      if (savedSuggestions) {
-        try {
-          const userSuggestions = JSON.parse(savedSuggestions);
-          this.allSuggestions = [...this.allSuggestions, ...userSuggestions];
-        } catch (error) {
-          console.error('Erreur chargement suggestions:', error);
-        }
+      const saved = localStorage.getItem('all_suggestions');
+      if (saved) {
+        const userSuggestions = JSON.parse(saved);
+        allSuggestions.push(...userSuggestions);
       }
     }
 
-    // Trouver la suggestion correspondant à l'ID
-    this.suggestion = this.allSuggestions.find(s => s.id === this.suggestionId);
-
-    if (!this.suggestion) {
-      console.error('❌ Suggestion non trouvée avec ID:', this.suggestionId);
+    const foundSuggestion = allSuggestions.find(s => s.id === this.suggestionId);
+    
+    if (foundSuggestion) {
+      // ✅ CORRECTION : Ajouter des valeurs par défaut
+      this.suggestion = {
+        ...foundSuggestion,
+        nbLikes: foundSuggestion.nbLikes ?? 0,
+        status: foundSuggestion.status || 'en_attente',
+        category: foundSuggestion.category || 'Autre'
+      };
+      
+      this.loadLikesForSuggestion();
+      console.log('✅ Suggestion chargée depuis localStorage');
     } else {
-      console.log('✅ Suggestion trouvée:', this.suggestion.title);
+      alert('Suggestion introuvable !');
+      this.router.navigate(['/suggestions']);
     }
   }
 
-  // Retour à la liste
+  loadLikesForSuggestion(): void {
+    if (!this.isBrowser || !this.suggestion) return;
+
+    const savedLikes = localStorage.getItem('suggestion_likes');
+    if (savedLikes) {
+      try {
+        const likesData = JSON.parse(savedLikes);
+        
+        if (likesData[this.suggestion.id] !== undefined) {
+          this.suggestion.nbLikes = likesData[this.suggestion.id];
+          console.log('👍 Likes mis à jour depuis localStorage:', this.suggestion.nbLikes);
+        }
+      } catch (error) {
+        console.error('❌ Erreur chargement likes:', error);
+      }
+    }
+  }
+
   backToList(): void {
     this.router.navigate(['/suggestions']);
   }
 
-  // Obtenir l'icône de catégorie
   getCategoryIcon(category: string): string {
-    switch (category?.toLowerCase()) {
-      case 'technologie': return '💻';
-      case 'événements': return '🎉';
-      case 'ressources humaines': return '👥';
-      case 'marketing': return '📢';
-      case 'finance': return '💰';
-      default: return '📌';
+    if (!category) return '📌';
+    
+    switch (category.toLowerCase()) {
+      case 'technologie': 
+      case 'technologie et services numériques': 
+        return '💻';
+      case 'événements': 
+      case 'activités et événements': 
+        return '🎉';
+      case 'ressources humaines': 
+        return '👥';
+      case 'marketing': 
+        return '📢';
+      case 'finance': 
+        return '💰';
+      case 'infrastructure et bâtiments':
+        return '🏢';
+      case 'restauration et cafétéria':
+        return '🍽️';
+      case 'hygiène et environnement':
+        return '🌿';
+      case 'transport et mobilité':
+        return '🚗';
+      case 'sécurité':
+        return '🔒';
+      case 'communication interne':
+        return '📢';
+      case 'accessibilité':
+        return '♿';
+      case 'autre':
+        return '📌';
+      default: 
+        return '📌';
     }
   }
 
-  // Obtenir le badge de statut
   getStatusBadge(status: string): string {
+    if (!status) return '⏳ En attente';
+    
     switch (status) {
       case 'acceptee': return '✅ Acceptée';
       case 'en_attente': return '⏳ En attente';
       case 'refusee': return '❌ Refusée';
-      default: return '📌 Statut inconnu';
+      default: return '⏳ En attente';
     }
+  }
+  
+  // ✅ GETTER pour éviter undefined dans le template
+  get displayLikes(): number {
+    return this.suggestion?.nbLikes ?? 0;
+  }
+  
+  get displayStatus(): string {
+    return this.getStatusBadge(this.suggestion?.status || 'en_attente');
+  }
+  
+  get displayCategory(): string {
+    return this.suggestion?.category || 'Autre';
+  }
+  
+  get displayCategoryIcon(): string {
+    return this.getCategoryIcon(this.suggestion?.category || '');
   }
 }

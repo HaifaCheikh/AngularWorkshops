@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, PLATFORM_ID, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { isPlatformBrowser } from '@angular/common';
 import { Suggestion } from '../../../models/suggestion';
+import { SuggestionService } from '../../../core/services/suggestion.service';
 
 @Component({
   selector: 'app-suggestion-form',
@@ -10,6 +12,7 @@ import { Suggestion } from '../../../models/suggestion';
 })
 export class SuggestionFormComponent implements OnInit {
   suggestionForm!: FormGroup;
+  private isBrowser: boolean;
   
   categories: string[] = [
     'Infrastructure et bâtiments',
@@ -26,8 +29,12 @@ export class SuggestionFormComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private router: Router
-  ) {}
+    private router: Router,
+    private suggestionService: SuggestionService,
+    @Inject(PLATFORM_ID) platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   ngOnInit(): void {
     this.initForm();
@@ -56,7 +63,6 @@ export class SuggestionFormComponent implements OnInit {
     });
   }
 
-  // Getters pour faciliter l'accès aux contrôles dans le template
   get title() {
     return this.suggestionForm.get('title');
   }
@@ -71,36 +77,54 @@ export class SuggestionFormComponent implements OnInit {
 
   onSubmit(): void {
     if (this.suggestionForm.valid) {
-      // Créer la nouvelle suggestion
       const newSuggestion: Suggestion = {
-        id: Date.now(), // ID auto-généré basé sur timestamp
+        id: 0,  // L'API générera l'ID
         title: this.suggestionForm.value.title,
         description: this.suggestionForm.value.description,
         category: this.suggestionForm.value.category,
         date: new Date(),
         status: 'en_attente',
-        nbLikes: 0 // Par défaut 0
+        nbLikes: 0
       };
 
-      console.log('✅ Nouvelle suggestion:', newSuggestion);
+      console.log('📤 Envoi de la suggestion...');
 
-      // Récupérer les suggestions existantes
-      const existingSuggestions = localStorage.getItem('all_suggestions');
-      let suggestions: Suggestion[] = existingSuggestions 
-        ? JSON.parse(existingSuggestions) 
-        : [];
-
-      // Ajouter la nouvelle suggestion
-      suggestions.push(newSuggestion);
-
-      // Sauvegarder dans localStorage
-      localStorage.setItem('all_suggestions', JSON.stringify(suggestions));
-
-      console.log('💾 Suggestion sauvegardée dans localStorage');
-
-      // Redirection vers la liste des suggestions
-      this.router.navigate(['/suggestions']);
+      // Essayer d'ajouter via API
+      this.suggestionService.addSuggestion(newSuggestion).subscribe({
+        next: (response) => {
+          console.log('✅ Suggestion ajoutée via API:', response);
+          alert('✅ Suggestion ajoutée avec succès !');
+          this.router.navigate(['/suggestions']);
+        },
+        error: (err) => {
+          console.error('❌ Erreur API:', err);
+          
+          // Fallback : ajouter dans localStorage
+          console.log('⚠️ Fallback : Sauvegarde dans localStorage');
+          this.addSuggestionToLocalStorage(newSuggestion);
+        }
+      });
     }
+  }
+
+  // Fallback : Ajouter dans localStorage si API ne fonctionne pas
+  addSuggestionToLocalStorage(suggestion: Suggestion): void {
+    if (!this.isBrowser) return;
+
+    // Générer un ID basé sur timestamp
+    suggestion.id = Date.now();
+
+    const existingSuggestions = localStorage.getItem('all_suggestions');
+    let suggestions: Suggestion[] = existingSuggestions 
+      ? JSON.parse(existingSuggestions) 
+      : [];
+
+    suggestions.push(suggestion);
+    localStorage.setItem('all_suggestions', JSON.stringify(suggestions));
+
+    console.log('💾 Suggestion sauvegardée dans localStorage');
+    alert('⚠️ Suggestion ajoutée localement (API non disponible)');
+    this.router.navigate(['/suggestions']);
   }
 
   onCancel(): void {

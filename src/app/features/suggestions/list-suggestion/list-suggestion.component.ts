@@ -1,6 +1,7 @@
 import { Component, OnInit, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Suggestion } from '../../../models/suggestion';
+import { SuggestionService } from '../../../core/services/suggestion.service';
 
 @Component({
   selector: 'app-list-suggestion',
@@ -12,120 +13,61 @@ export class ListSuggestionComponent implements OnInit {
   favorites: Suggestion[] = [];
   currentFilter: string = 'all';
   showFavoritesView: boolean = false;
+  suggestions: Suggestion[] = [];
   
   private isBrowser: boolean;
-  
-  defaultSuggestions: Suggestion[] = [
-    {
-      id: 1,
-      title: 'Organiser une journée team building',
-      description: 'Suggestion pour organiser une journée de team building pour renforcer les liens entre les membres de l\'équipe et améliorer la cohésion d\'équipe.',
-      category: 'Événements',
-      date: new Date('2025-01-20'),
-      status: 'acceptee',
-      nbLikes: 10
-    },
-    {
-      id: 2,
-      title: 'Améliorer le système de réservation',
-      description: 'Proposition pour améliorer la gestion des réservations en ligne avec un système de confirmation automatique et notifications en temps réel.',
-      category: 'Technologie',
-      date: new Date('2025-01-15'),
-      status: 'refusee',
-      nbLikes: 5
-    },
-    {
-      id: 3,
-      title: 'Créer un système de récompenses',
-      description: 'Mise en place d\'un programme de récompenses pour motiver les employés et reconnaître leurs efforts avec des badges et points.',
-      category: 'Ressources Humaines',
-      date: new Date('2025-01-25'),
-      status: 'refusee',
-      nbLikes: 3
-    },
-    {
-      id: 4,
-      title: 'Moderniser l\'interface utilisateur',
-      description: 'Refonte complète de l\'interface utilisateur pour une meilleure expérience utilisateur avec un design moderne et intuitif.',
-      category: 'Technologie',
-      date: new Date('2025-01-30'),
-      status: 'en_attente',
-      nbLikes: 15
-    },
-    {
-      id: 5,
-      title: 'Implémenter le télétravail hybride',
-      description: 'Mise en place d\'une politique de télétravail hybride pour améliorer l\'équilibre vie professionnelle/vie personnelle.',
-      category: 'Ressources Humaines',
-      date: new Date('2025-02-01'),
-      status: 'acceptee',
-      nbLikes: 22
-    },
-    {
-      id: 6,
-      title: 'Optimiser les processus de recrutement',
-      description: 'Automatisation et optimisation du processus de recrutement avec des outils d\'IA pour gagner du temps.',
-      category: 'Ressources Humaines',
-      date: new Date('2025-01-28'),
-      status: 'en_attente',
-      nbLikes: 8
-    }
-  ];
 
-  suggestions: Suggestion[] = [];
-
-  constructor(@Inject(PLATFORM_ID) platformId: Object) {
+  constructor(
+    @Inject(PLATFORM_ID) platformId: Object,
+    private suggestionService: SuggestionService
+  ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
   ngOnInit(): void {
-    console.log('🔄 Initialisation du composant...');
-    this.loadAllSuggestions();
-    this.loadLikesFromStorage();
-    this.loadFavoritesFromStorage();
-    console.log('✅ Suggestions chargées:', this.suggestions.length);
-    console.log('📋 Liste des suggestions:', this.suggestions.map(s => `${s.id}: ${s.title}`));
+    console.log('🔄 Chargement des suggestions...');
+    this.loadSuggestionsFromService();
   }
 
-  loadAllSuggestions(): void {
-    console.log('\n📦 Chargement des suggestions...');
-    
-    // Toujours commencer avec les suggestions par défaut
-    this.suggestions = [...this.defaultSuggestions];
-    console.log('✅ Suggestions par défaut:', this.suggestions.length);
+  loadSuggestionsFromService(): void {
+    this.suggestionService.getAllSuggestions().subscribe({
+      next: (data: Suggestion[]) => {
+        console.log('✅ Suggestions depuis API:', data.length);
+        this.suggestions = data;
+        
+        // Charger les likes depuis localStorage (pour synchroniser)
+        this.loadLikesFromStorage();
+        this.loadFavoritesFromStorage();
+      },
+      error: (err) => {
+        console.warn('⚠️ API non disponible, fallback vers localStorage');
+        this.loadSuggestionsFromLocalStorage();
+      }
+    });
+  }
+
+  loadSuggestionsFromLocalStorage(): void {
+    const defaultSuggestions = this.suggestionService.getSuggestionsList();
+    this.suggestions = [...defaultSuggestions];
 
     if (this.isBrowser) {
       const savedSuggestions = localStorage.getItem('all_suggestions');
-      console.log('💾 localStorage brut:', savedSuggestions);
-      
       if (savedSuggestions) {
         try {
           const userSuggestions = JSON.parse(savedSuggestions);
-          console.log('📥 Suggestions utilisateur parsées:', userSuggestions.length);
-          
-          // Ajouter les suggestions utilisateur
           this.suggestions = [...this.suggestions, ...userSuggestions];
-          console.log('✅ Total après fusion:', this.suggestions.length);
+          console.log('📦 Suggestions depuis localStorage:', this.suggestions.length);
         } catch (error) {
-          console.error('❌ Erreur chargement suggestions:', error);
+          console.error('❌ Erreur localStorage:', error);
         }
-      } else {
-        console.log('ℹ️ Aucune suggestion dans localStorage');
       }
     }
-    
-    console.log('📊 Suggestions finales:', this.suggestions.map(s => `ID ${s.id}: ${s.title} (${s.status})`));
+
+    this.loadLikesFromStorage();
+    this.loadFavoritesFromStorage();
   }
 
-  handleEmptyAction(): void {
-    if (this.showFavoritesView) {
-      this.showAllSuggestions();
-    } else {
-      this.searchText = '';
-      this.setFilter('all');
-    }
-  }
-
+  // ✅ CHARGER LES LIKES DEPUIS LOCALSTORAGE
   loadLikesFromStorage(): void {
     if (!this.isBrowser) return;
 
@@ -133,26 +75,33 @@ export class ListSuggestionComponent implements OnInit {
     if (savedLikes) {
       try {
         const likesData = JSON.parse(savedLikes);
+        
+        // Appliquer les likes à chaque suggestion
         this.suggestions.forEach(suggestion => {
           if (likesData[suggestion.id] !== undefined) {
             suggestion.nbLikes = likesData[suggestion.id];
           }
         });
-        console.log('👍 Likes chargés');
+        
+        console.log('👍 Likes chargés depuis localStorage');
       } catch (error) {
-        console.error('Erreur chargement likes:', error);
+        console.error('❌ Erreur chargement likes:', error);
       }
     }
   }
 
+  // ✅ SAUVEGARDER LES LIKES DANS LOCALSTORAGE
   saveLikesToStorage(): void {
     if (!this.isBrowser) return;
 
     const likesData: { [key: number]: number } = {};
+    
     this.suggestions.forEach(suggestion => {
       likesData[suggestion.id] = suggestion.nbLikes;
     });
+    
     localStorage.setItem('suggestion_likes', JSON.stringify(likesData));
+    console.log('💾 Likes sauvegardés dans localStorage');
   }
 
   loadFavoritesFromStorage(): void {
@@ -172,7 +121,6 @@ export class ListSuggestionComponent implements OnInit {
 
   saveFavoritesToStorage(): void {
     if (!this.isBrowser) return;
-
     const favoriteIds = this.favorites.map(f => f.id);
     localStorage.setItem('suggestion_favorites', JSON.stringify(favoriteIds));
   }
@@ -180,60 +128,60 @@ export class ListSuggestionComponent implements OnInit {
   showFavorites(): void {
     this.showFavoritesView = true;
     this.currentFilter = 'all';
-    console.log('⭐ Affichage des favoris');
   }
 
   showAllSuggestions(): void {
     this.showFavoritesView = false;
     this.currentFilter = 'all';
-    console.log('📋 Affichage de toutes les suggestions');
   }
 
   get filteredSuggestions(): Suggestion[] {
-    console.log('\n🔍 Filtrage des suggestions...');
-    console.log('📊 Suggestions disponibles:', this.suggestions.length);
-    console.log('🎯 Filtre actuel:', this.currentFilter);
-    console.log('⭐ Vue favoris:', this.showFavoritesView);
-    console.log('🔎 Texte recherche:', this.searchText);
-    
     let result = this.showFavoritesView ? [...this.favorites] : [...this.suggestions];
-    console.log('📦 Après sélection favoris/tous:', result.length);
 
-    // Filtre par statut
     if (this.currentFilter !== 'all' && !this.showFavoritesView) {
-      console.log('🔍 Application du filtre statut:', this.currentFilter);
       result = result.filter(s => s.status === this.currentFilter);
-      console.log('📊 Après filtre statut:', result.length);
     }
 
-    // Recherche texte
     if (this.searchText && this.searchText.trim()) {
       const searchLower = this.searchText.toLowerCase().trim();
-      console.log('🔍 Application de la recherche:', searchLower);
       result = result.filter(s => 
         s.title.toLowerCase().includes(searchLower) ||
         s.category.toLowerCase().includes(searchLower) ||
         s.description.toLowerCase().includes(searchLower)
       );
-      console.log('📊 Après recherche:', result.length);
     }
 
-    // Tri par date (plus récent en premier)
-    result = result.sort((a, b) => {
+    return result.sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
       return dateB - dateA;
     });
-
-    console.log('✅ Résultat final:', result.length, 'suggestions');
-    console.log('📋 IDs filtrés:', result.map(s => s.id));
-    return result;
   }
 
+  // ✅ INCRÉMENTER LES LIKES (API + localStorage)
   incrementLikes(suggestion: Suggestion): void {
-    suggestion.nbLikes++;
-    this.saveLikesToStorage();
-    console.log('👍 Like ajouté:', suggestion.title);
+    const newLikes = suggestion.nbLikes + 1;
+    
+    // Essayer de mettre à jour via API
+    this.suggestionService.updateLikes(suggestion.id, newLikes).subscribe({
+      next: (updatedSuggestion) => {
+        // Mise à jour réussie via API
+        suggestion.nbLikes = updatedSuggestion.nbLikes;
+        console.log('👍 Like ajouté via API:', suggestion.title);
+        
+        // Sauvegarder aussi dans localStorage pour synchronisation
+        this.saveLikesToStorage();
+      },
+      error: (err) => {
+        console.warn('⚠️ API non disponible, like enregistré localement');
+        
+        // Incrémenter localement
+        suggestion.nbLikes++;
+        
+        // Sauvegarder dans localStorage
+        this.saveLikesToStorage();
+      }
+    });
   }
 
   addToFavorites(suggestion: Suggestion): void {
@@ -263,7 +211,6 @@ export class ListSuggestionComponent implements OnInit {
   }
 
   setFilter(filter: string): void {
-    console.log('🎯 Changement de filtre:', filter);
     this.currentFilter = filter;
     this.showFavoritesView = false;
   }
@@ -272,25 +219,41 @@ export class ListSuggestionComponent implements OnInit {
     const confirmDelete = confirm(`Êtes-vous sûr de vouloir supprimer la suggestion "${suggestion.title}" ?`);
     
     if (confirmDelete) {
-      console.log('🗑️ Suppression de:', suggestion.title);
-      
-      // Supprimer la suggestion de la liste
-      this.suggestions = this.suggestions.filter(s => s.id !== suggestion.id);
-      
-      // Supprimer des favoris si présente
-      this.favorites = this.favorites.filter(f => f.id !== suggestion.id);
-      
-      // Sauvegarder dans localStorage (seulement les suggestions utilisateur)
-      if (this.isBrowser) {
-        const userSuggestions = this.suggestions.filter(s => s.id > 6);
-        console.log('💾 Sauvegarde des suggestions utilisateur:', userSuggestions.length);
-        localStorage.setItem('all_suggestions', JSON.stringify(userSuggestions));
-        this.saveFavoritesToStorage();
-        this.saveLikesToStorage();
-      }
-      
-      console.log('✅ Suggestion supprimée avec succès');
-      alert('✅ Suggestion supprimée avec succès !');
+      this.suggestionService.deleteSuggestion(suggestion.id).subscribe({
+        next: () => {
+          this.suggestions = this.suggestions.filter(s => s.id !== suggestion.id);
+          this.favorites = this.favorites.filter(f => f.id !== suggestion.id);
+          this.saveFavoritesToStorage();
+          this.saveLikesToStorage();
+          
+          console.log('✅ Suggestion supprimée via API');
+          alert('✅ Suggestion supprimée avec succès !');
+        },
+        error: (err) => {
+          console.error('❌ Erreur suppression API:', err);
+          
+          this.suggestions = this.suggestions.filter(s => s.id !== suggestion.id);
+          this.favorites = this.favorites.filter(f => f.id !== suggestion.id);
+          
+          if (this.isBrowser) {
+            const userSuggestions = this.suggestions.filter(s => s.id > 6);
+            localStorage.setItem('all_suggestions', JSON.stringify(userSuggestions));
+            this.saveFavoritesToStorage();
+            this.saveLikesToStorage();
+          }
+          
+          alert('⚠️ Suppression locale uniquement (API non disponible)');
+        }
+      });
+    }
+  }
+
+  handleEmptyAction(): void {
+    if (this.showFavoritesView) {
+      this.showAllSuggestions();
+    } else {
+      this.searchText = '';
+      this.setFilter('all');
     }
   }
 

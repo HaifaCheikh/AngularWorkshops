@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { Suggestion } from '../../../models/suggestion';
+import { SuggestionService } from '../../../core/services/suggestion.service';
 
 @Component({
   selector: 'app-suggestion-edit',
@@ -12,6 +13,7 @@ import { Suggestion } from '../../../models/suggestion';
 export class SuggestionEditComponent implements OnInit {
   suggestionForm!: FormGroup;
   suggestionId!: number;
+  currentSuggestion: Suggestion | undefined;
   private isBrowser: boolean;
   
   categories: string[] = [
@@ -27,71 +29,11 @@ export class SuggestionEditComponent implements OnInit {
     'Autre'
   ];
 
-  // Suggestions par défaut
-  defaultSuggestions: Suggestion[] = [
-    {
-      id: 1,
-      title: 'Organiser une journée team building',
-      description: 'Suggestion pour organiser une journée de team building pour renforcer les liens entre les membres de l\'équipe et améliorer la cohésion d\'équipe.',
-      category: 'Événements',
-      date: new Date('2025-01-20'),
-      status: 'acceptee',
-      nbLikes: 10
-    },
-    {
-      id: 2,
-      title: 'Améliorer le système de réservation',
-      description: 'Proposition pour améliorer la gestion des réservations en ligne avec un système de confirmation automatique et notifications en temps réel.',
-      category: 'Technologie',
-      date: new Date('2025-01-15'),
-      status: 'refusee',
-      nbLikes: 5
-    },
-    {
-      id: 3,
-      title: 'Créer un système de récompenses',
-      description: 'Mise en place d\'un programme de récompenses pour motiver les employés et reconnaître leurs efforts avec des badges et points.',
-      category: 'Ressources Humaines',
-      date: new Date('2025-01-25'),
-      status: 'refusee',
-      nbLikes: 3
-    },
-    {
-      id: 4,
-      title: 'Moderniser l\'interface utilisateur',
-      description: 'Refonte complète de l\'interface utilisateur pour une meilleure expérience utilisateur avec un design moderne et intuitif.',
-      category: 'Technologie',
-      date: new Date('2025-01-30'),
-      status: 'en_attente',
-      nbLikes: 15
-    },
-    {
-      id: 5,
-      title: 'Implémenter le télétravail hybride',
-      description: 'Mise en place d\'une politique de télétravail hybride pour améliorer l\'équilibre vie professionnelle/vie personnelle.',
-      category: 'Ressources Humaines',
-      date: new Date('2025-02-01'),
-      status: 'acceptee',
-      nbLikes: 22
-    },
-    {
-      id: 6,
-      title: 'Optimiser les processus de recrutement',
-      description: 'Automatisation et optimisation du processus de recrutement avec des outils d\'IA pour gagner du temps.',
-      category: 'Ressources Humaines',
-      date: new Date('2025-01-28'),
-      status: 'en_attente',
-      nbLikes: 8
-    }
-  ];
-
-  allSuggestions: Suggestion[] = [];
-  currentSuggestion: Suggestion | undefined;
-
   constructor(
     private fb: FormBuilder,
     private router: Router,
     private route: ActivatedRoute,
+    private suggestionService: SuggestionService,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -99,26 +41,15 @@ export class SuggestionEditComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+    this.suggestionId = +this.route.snapshot.params['id'];
+    console.log('📝 ID à modifier:', this.suggestionId);
     this.loadSuggestion();
   }
 
   initForm(): void {
     this.suggestionForm = this.fb.group({
-      title: [
-        '', 
-        [
-          Validators.required,
-          Validators.minLength(5),
-          Validators.pattern('^[A-Z][a-zA-Z ]*$')
-        ]
-      ],
-      description: [
-        '', 
-        [
-          Validators.required,
-          Validators.minLength(30)
-        ]
-      ],
+      title: ['', [Validators.required, Validators.minLength(5), Validators.pattern('^[A-Z][a-zA-Z ]*$')]],
+      description: ['', [Validators.required, Validators.minLength(30)]],
       category: ['', Validators.required],
       date: [{ value: '', disabled: true }],
       status: [{ value: '', disabled: true }]
@@ -126,49 +57,49 @@ export class SuggestionEditComponent implements OnInit {
   }
 
   loadSuggestion(): void {
-    // Récupérer l'ID depuis l'URL
-    this.route.params.subscribe(params => {
-      this.suggestionId = +params['id'];
-      console.log('📝 ID à modifier:', this.suggestionId);
-      
-      // Charger toutes les suggestions
-      this.loadAllSuggestions();
-      
-      // Trouver la suggestion à modifier
-      this.currentSuggestion = this.allSuggestions.find(s => s.id === this.suggestionId);
-      
-      if (this.currentSuggestion) {
-        // Pré-remplir le formulaire
-        this.suggestionForm.patchValue({
-          title: this.currentSuggestion.title,
-          description: this.currentSuggestion.description,
-          category: this.currentSuggestion.category,
-          date: new Date(this.currentSuggestion.date).toISOString().split('T')[0],
-          status: this.getStatusLabel(this.currentSuggestion.status)
-        });
-        console.log('✅ Formulaire pré-rempli');
-      } else {
-        console.error('❌ Suggestion non trouvée');
-        alert('Suggestion introuvable !');
-        this.router.navigate(['/suggestions']);
+    this.suggestionService.getSuggestionById(this.suggestionId).subscribe({
+      next: (data: Suggestion) => {
+        this.currentSuggestion = data;
+        this.patchForm(data);
+        console.log('✅ Suggestion chargée via API');
+      },
+      error: (err) => {
+        console.warn('⚠️ API non disponible, fallback localStorage');
+        this.loadSuggestionFromLocalStorage();
       }
     });
   }
 
-  loadAllSuggestions(): void {
-    this.allSuggestions = [...this.defaultSuggestions];
-
+  loadSuggestionFromLocalStorage(): void {
+    const allSuggestions = this.suggestionService.getSuggestionsList();
+    
     if (this.isBrowser) {
-      const savedSuggestions = localStorage.getItem('all_suggestions');
-      if (savedSuggestions) {
-        try {
-          const userSuggestions = JSON.parse(savedSuggestions);
-          this.allSuggestions = [...this.allSuggestions, ...userSuggestions];
-        } catch (error) {
-          console.error('Erreur chargement suggestions:', error);
-        }
+      const saved = localStorage.getItem('all_suggestions');
+      if (saved) {
+        const userSuggestions = JSON.parse(saved);
+        allSuggestions.push(...userSuggestions);
       }
     }
+
+    this.currentSuggestion = allSuggestions.find(s => s.id === this.suggestionId);
+    
+    if (this.currentSuggestion) {
+      this.patchForm(this.currentSuggestion);
+      console.log('✅ Suggestion chargée depuis localStorage');
+    } else {
+      alert('Suggestion introuvable !');
+      this.router.navigate(['/suggestions']);
+    }
+  }
+
+  patchForm(suggestion: Suggestion): void {
+    this.suggestionForm.patchValue({
+      title: suggestion.title,
+      description: suggestion.description,
+      category: suggestion.category,
+      date: new Date(suggestion.date).toISOString().split('T')[0],
+      status: this.getStatusLabel(suggestion.status)
+    });
   }
 
   getStatusLabel(status: string): string {
@@ -194,24 +125,45 @@ export class SuggestionEditComponent implements OnInit {
 
   onSubmit(): void {
     if (this.suggestionForm.valid && this.currentSuggestion) {
-      // Mettre à jour la suggestion
-      this.currentSuggestion.title = this.suggestionForm.value.title;
-      this.currentSuggestion.description = this.suggestionForm.value.description;
-      this.currentSuggestion.category = this.suggestionForm.value.category;
+      const updatedSuggestion: Suggestion = {
+        ...this.currentSuggestion,
+        title: this.suggestionForm.value.title,
+        description: this.suggestionForm.value.description,
+        category: this.suggestionForm.value.category
+      };
 
-      console.log('✅ Suggestion modifiée:', this.currentSuggestion);
+      console.log('📤 Mise à jour via API...');
 
-      // Sauvegarder dans localStorage
-      if (this.isBrowser) {
-        // Séparer les suggestions par défaut et utilisateur
-        const userSuggestions = this.allSuggestions.filter(s => s.id > 6);
-        localStorage.setItem('all_suggestions', JSON.stringify(userSuggestions));
-        console.log('💾 Modifications sauvegardées');
+      this.suggestionService.updateSuggestion(this.suggestionId, updatedSuggestion).subscribe({
+        next: (response) => {
+          console.log('✅ Suggestion mise à jour via API');
+          alert('✅ Suggestion modifiée avec succès !');
+          this.router.navigate(['/suggestions']);
+        },
+        error: (err) => {
+          console.error('❌ Erreur API:', err);
+          console.log('⚠️ Fallback : Mise à jour dans localStorage');
+          this.updateSuggestionInLocalStorage(updatedSuggestion);
+        }
+      });
+    }
+  }
+
+  updateSuggestionInLocalStorage(updatedSuggestion: Suggestion): void {
+    if (!this.isBrowser) return;
+
+    const saved = localStorage.getItem('all_suggestions');
+    if (saved) {
+      let suggestions = JSON.parse(saved);
+      const index = suggestions.findIndex((s: Suggestion) => s.id === this.suggestionId);
+      
+      if (index !== -1) {
+        suggestions[index] = updatedSuggestion;
+        localStorage.setItem('all_suggestions', JSON.stringify(suggestions));
+        console.log('💾 Suggestion mise à jour dans localStorage');
+        alert('⚠️ Modification locale uniquement (API non disponible)');
+        this.router.navigate(['/suggestions']);
       }
-
-      // Redirection
-      alert('✅ Suggestion modifiée avec succès !');
-      this.router.navigate(['/suggestions']);
     }
   }
 
